@@ -1,0 +1,84 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("staff") // admin | staff
+  jobTitle     String   @default("")
+  phone        String   @default("")
+  createdAt    DateTime @default(now())
+
+  visits        Visit[]
+  notifications Notification[]
+}
+
+model Host {
+  id         String   @id @default(cuid())
+  name       String
+  department String   @default("")
+  email      String   @default("")
+  phone      String   @default("")
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  visits Visit[]
+}
+
+model Visit {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  type          String    @default("individual") // individual | group
+  groupSize     Int       @default(1)
+  visitorName   String
+  phone         String    @default("")
+  email         String    @default("")
+  company       String    @default("")
+  document      String    @default("")
+  purpose       String
+  notes         String    @default("")
+  hostId        String?
+  host          Host?     @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  hostName      String    @default("")
+  status        String    @default("pending") // pending | checked_in | checked_out | cancelled
+  visitDate     String // YYYY-MM-DD (agendada ou do check-in)
+  preRegistered Boolean   @default(false)
+  checkInAt     DateTime?
+  checkOutAt    DateTime?
+  createdById   String?
+  createdBy     User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([visitDate])
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("visitor") // visitor | system
+  kind      String // checkin | checkout | prereg | cancel | welcome | security
+  title     String
+  body      String   @default("")
+  visitId   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
